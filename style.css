@@ -131,7 +131,7 @@ input, textarea { font: inherit; color: inherit; background: transparent; }
 
 /* Composer */
 .composer {
-  max-width: 600px;
+  max-width: 680px;
   margin: 0 auto 32px;
   padding: 8px 16px;
   border-radius: 8px;
@@ -146,6 +146,9 @@ input, textarea { font: inherit; color: inherit; background: transparent; }
   padding: 8px 0;
 }
 .composer-title, .editor-title { font-size: 1.1rem; font-weight: 500; }
+.composer textarea, .editor textarea { line-height: 1.5; }
+/* Long drafts scroll inside the box so its buttons stay in view. */
+#newBody { max-height: 55vh; overflow-y: auto; }
 .composer-actions, .editor-actions { display: flex; align-items: center; gap: 4px; }
 .spacer { flex: 1; }
 
@@ -159,7 +162,7 @@ input, textarea { font: inherit; color: inherit; background: transparent; }
 }
 #pinnedSection { margin-bottom: 32px; }
 .grid {
-  columns: 240px;
+  columns: 260px;
   column-gap: 16px;
 }
 .note {
@@ -178,10 +181,16 @@ input, textarea { font: inherit; color: inherit; background: transparent; }
 .note .body {
   white-space: pre-wrap;
   font-size: 0.9rem;
-  max-height: 30em;
+  line-height: 1.45;
+  max-height: 24em;
   overflow: hidden;
-  -webkit-mask-image: linear-gradient(to bottom, #000 26em, transparent 30em);
-  mask-image: linear-gradient(to bottom, #000 26em, transparent 30em);
+}
+/* Fade out previews that are too long to show in full. */
+.note .body.clipped {
+  -webkit-mask-image: linear-gradient(to bottom, #000 19em, transparent 24em);
+  mask-image: linear-gradient(to bottom, #000 19em, transparent 24em);
+}
+.note .more { font-size: 0.8rem; color: var(--muted); margin-top: 4px;
 }
 .note .pin {
   position: absolute;
@@ -252,6 +261,34 @@ input, textarea { font: inherit; color: inherit; background: transparent; }
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
 }
 .editor.small { width: min(320px, calc(100vw - 32px)); }
+
+/* Note editor: header and toolbar stay put, the text area in between scrolls. */
+#editor {
+  width: min(860px, calc(100vw - 32px));
+  max-height: 90vh;
+  padding: 0;
+  overflow: visible;
+}
+#editor.fullscreen {
+  width: 100vw;
+  max-width: 100vw;
+  height: 100dvh;
+  max-height: 100dvh;
+  border-radius: 0;
+}
+.editor-form { display: flex; flex-direction: column; max-height: 90vh; }
+#editor.fullscreen .editor-form { height: 100%; max-height: none; }
+.editor-head { display: flex; align-items: center; gap: 8px; padding: 12px 12px 0 20px; }
+.editor-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 0 20px; }
+#editBody { min-height: 40vh; font-size: 1rem; }
+#editor.fullscreen #editBody { min-height: 70vh; }
+#editor .editor-meta { padding: 0 20px; }
+#editor .editor-actions {
+  padding: 4px 12px 8px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+:root[data-theme="dark"] #editor .editor-actions { border-top-color: rgba(255, 255, 255, 0.12); }
+#editor .checklist { font-size: 1rem; }
 .editor::backdrop { background: rgba(0, 0, 0, 0.5); }
 .editor h3 { margin: 0 0 12px; font-weight: 500; }
 .editor-meta { font-size: 0.75rem; color: var(--muted); text-align: right; margin: 8px 0; }
@@ -312,6 +349,10 @@ input, textarea { font: inherit; color: inherit; background: transparent; }
   .sidebar.collapsed { display: none; }
   .content { padding: 16px 16px 64px; }
   .note .note-actions, .note .pin { opacity: 1; }
+  /* The editor fills the screen on phones. */
+  #editor { width: 100vw; max-width: 100vw; height: 100dvh; max-height: 100dvh; border-radius: 0; }
+  .editor-form { height: 100%; max-height: none; }
+  #expandBtn { display: none; }
 }
 
 /* Links */

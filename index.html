@@ -34,6 +34,7 @@
         <div class="composer-actions" hidden>
           <button type="button" class="icon-btn" id="newChecklistBtn" title="Checklist">☑️</button>
           <button type="button" class="icon-btn" id="newColorBtn" title="Background color">🎨</button>
+          <button type="button" class="icon-btn" id="newExpandBtn" title="Open in large editor">⤢</button>
           <span class="spacer"></span>
           <button type="submit" class="text-btn">Close</button>
         </div>
@@ -57,12 +58,17 @@
 
   <!-- Note editor -->
   <dialog id="editor" class="editor">
-    <form method="dialog" id="editorForm">
-      <input type="text" id="editTitle" placeholder="Title" class="editor-title">
-      <textarea id="editBody" placeholder="Note" rows="8"></textarea>
-      <ul id="editChecklist" class="checklist editing"></ul>
-      <div class="editor-links" id="editLinks" hidden></div>
-      <div class="editor-labels" id="editLabels"></div>
+    <form method="dialog" id="editorForm" class="editor-form">
+      <div class="editor-head">
+        <input type="text" id="editTitle" placeholder="Title" class="editor-title">
+        <button type="button" class="icon-btn" id="expandBtn" title="Full screen" aria-label="Toggle full screen">⤢</button>
+      </div>
+      <div class="editor-scroll">
+        <textarea id="editBody" placeholder="Note" rows="10"></textarea>
+        <ul id="editChecklist" class="checklist editing"></ul>
+        <div class="editor-links" id="editLinks" hidden></div>
+        <div class="editor-labels" id="editLabels"></div>
+      </div>
       <div class="editor-meta" id="editMeta"></div>
       <div class="editor-actions">
         <button type="button" class="icon-btn" id="pinBtn" title="Pin">📌</button>

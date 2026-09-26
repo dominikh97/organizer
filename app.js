@@ -2,6 +2,7 @@
 
 const STORAGE_KEY = 'organizer.v1';
 const THEME_KEY = 'organizer.theme';
+const FULLSCREEN_KEY = 'organizer.editorFullscreen';
 const TRASH_DAYS = 7;
 const COLORS = ['default', 'red', 'orange', 'yellow', 'green', 'teal', 'blue', 'purple', 'pink', 'gray'];
 
@@ -201,6 +202,16 @@ function renderCard(note) {
     div.className = 'body';
     div.append(linkify(note.body));
     card.append(div);
+    // Mark long previews once laid out so they fade out and hint there's more.
+    requestAnimationFrame(() => {
+      if (div.scrollHeight > div.clientHeight + 1) {
+        div.classList.add('clipped');
+        const more = document.createElement('div');
+        more.className = 'more';
+        more.textContent = 'Click to read more…';
+        div.after(more);
+      }
+    });
   }
 
   if (note.labels.length) card.append(chips(note.labels));
@@ -376,6 +387,20 @@ $('#newColorBtn').addEventListener('click', (e) => {
   openFloatPalette(e.currentTarget, composerColor, setComposerColor);
 });
 
+// Move the draft into the large editor, which suits longer notes.
+$('#newExpandBtn').addEventListener('click', () => {
+  const labels = view.startsWith('label:') ? [view.slice(6)] : [];
+  const note = newNote({ title: newTitle.value, body: newBody.value, labels, color: composerColor });
+  state.notes.push(note);
+  newTitle.value = '';
+  newBody.value = '';
+  collapseComposer();
+  render();
+  openEditor(note.id);
+  editBody.focus();
+  editBody.setSelectionRange(editBody.value.length, editBody.value.length);
+});
+
 $('#newChecklistBtn').addEventListener('click', () => {
   // Turn whatever was typed into checklist items and open the full editor.
   const lines = newBody.value.split('\n').filter((l) => l.trim());
@@ -395,8 +420,14 @@ $('#newChecklistBtn').addEventListener('click', () => {
 });
 
 function autoGrow(el) {
+  // Resizing briefly collapses the box, so keep scroll positions from jumping.
+  const scroller = el.closest('.editor-scroll');
+  const outerTop = scroller ? scroller.scrollTop : 0;
+  const innerTop = el.scrollTop;
   el.style.height = 'auto';
   el.style.height = el.scrollHeight + 'px';
+  el.scrollTop = innerTop;
+  if (scroller) scroller.scrollTop = outerTop;
 }
 
 // ---------- Editor ----------
@@ -415,6 +446,7 @@ function openEditor(id) {
   renderEditorChrome();
   renderEditorChecklist();
   editor.showModal();
+  editor.querySelector('.editor-scroll').scrollTop = 0;
   if (note.items) {
     const inputs = editChecklist.querySelectorAll('.item-text');
     inputs[inputs.length - 1]?.focus();
@@ -586,6 +618,25 @@ editor.addEventListener('close', () => {
   }
   save();
   render();
+});
+
+// Full-screen toggle for the editor, remembered between visits.
+function setEditorFullscreen(on) {
+  editor.classList.toggle('fullscreen', on);
+  $('#expandBtn').textContent = on ? '⤡' : '⤢';
+  $('#expandBtn').title = on ? 'Exit full screen' : 'Full screen';
+}
+
+try {
+  setEditorFullscreen(localStorage.getItem(FULLSCREEN_KEY) === '1');
+} catch (e) {
+  setEditorFullscreen(false);
+}
+
+$('#expandBtn').addEventListener('click', () => {
+  const on = !editor.classList.contains('fullscreen');
+  setEditorFullscreen(on);
+  try { localStorage.setItem(FULLSCREEN_KEY, on ? '1' : '0'); } catch (e) { /* ignore */ }
 });
 
 // Close when clicking the backdrop.
