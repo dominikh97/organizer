@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Organizer</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <button class="icon-btn" id="menuBtn" title="Menu" aria-label="Toggle menu">☰</button>
+    <h1 class="brand">📒 Organizer</h1>
+    <input type="search" id="search" placeholder="Search notes" aria-label="Search notes">
+    <button class="icon-btn" id="themeBtn" title="Toggle dark mode" aria-label="Toggle dark mode">🌓</button>
+  </header>
+
+  <div class="layout">
+    <nav class="sidebar" id="sidebar">
+      <button class="nav-item active" data-view="notes"><span class="ico">💡</span><span class="lbl">Notes</span></button>
+      <div id="labelNav"></div>
+      <button class="nav-item" id="editLabelsBtn"><span class="ico">✏️</span><span class="lbl">Edit labels</span></button>
+      <button class="nav-item" data-view="archive"><span class="ico">📦</span><span class="lbl">Archive</span></button>
+      <button class="nav-item" data-view="trash"><span class="ico">🗑️</span><span class="lbl">Trash</span></button>
+      <hr class="nav-sep">
+      <button class="nav-item" id="exportBtn"><span class="ico">⬇️</span><span class="lbl">Export backup</span></button>
+      <button class="nav-item" id="importBtn"><span class="ico">⬆️</span><span class="lbl">Import backup</span></button>
+      <input type="file" id="importFile" accept="application/json,.json" hidden>
+    </nav>
+
+    <main class="content">
+      <form class="composer" id="composer" autocomplete="off">
+        <input type="text" id="newTitle" placeholder="Title" class="composer-title" hidden>
+        <textarea id="newBody" placeholder="Take a note…" rows="1"></textarea>
+        <div class="composer-actions" hidden>
+          <button type="button" class="icon-btn" id="newChecklistBtn" title="Checklist">☑️</button>
+          <span class="spacer"></span>
+          <button type="submit" class="text-btn">Close</button>
+        </div>
+      </form>
+
+      <div class="trash-bar" id="trashBar" hidden>
+        Notes in Trash are deleted after 7 days.
+        <button type="button" class="text-btn" id="emptyTrashBtn">Empty Trash</button>
+      </div>
+      <div id="emptyState" class="empty" hidden></div>
+      <section id="pinnedSection" hidden>
+        <h2 class="section-title">Pinned</h2>
+        <div class="grid" id="pinnedGrid"></div>
+      </section>
+      <section id="othersSection">
+        <h2 class="section-title" id="othersTitle" hidden>Others</h2>
+        <div class="grid" id="notesGrid"></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Note editor -->
+  <dialog id="editor" class="editor">
+    <form method="dialog" id="editorForm">
+      <input type="text" id="editTitle" placeholder="Title" class="editor-title">
+      <textarea id="editBody" placeholder="Note" rows="8"></textarea>
+      <ul id="editChecklist" class="checklist editing"></ul>
+      <div class="editor-labels" id="editLabels"></div>
+      <div class="editor-meta" id="editMeta"></div>
+      <div class="editor-actions">
+        <button type="button" class="icon-btn" id="pinBtn" title="Pin">📌</button>
+        <div class="dropdown">
+          <button type="button" class="icon-btn" id="colorBtn" title="Background color">🎨</button>
+          <div class="palette" id="palette" hidden></div>
+        </div>
+        <div class="dropdown">
+          <button type="button" class="icon-btn" id="labelBtn" title="Labels">🏷️</button>
+          <div class="label-picker" id="labelPicker" hidden></div>
+        </div>
+        <button type="button" class="icon-btn" id="toggleListBtn" title="Toggle checklist">☑️</button>
+        <button type="button" class="icon-btn" id="archiveBtn" title="Archive">📦</button>
+        <button type="button" class="icon-btn" id="deleteBtn" title="Delete">🗑️</button>
+        <span class="spacer"></span>
+        <button type="submit" class="text-btn">Close</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Label manager -->
+  <dialog id="labelDialog" class="editor small">
+    <form method="dialog" id="labelForm">
+      <h3>Edit labels</h3>
+      <div class="label-add">
+        <input type="text" id="newLabel" placeholder="Create new label">
+        <button type="button" class="text-btn" id="addLabelBtn">Add</button>
+      </div>
+      <ul id="labelList" class="label-list"></ul>
+      <div class="editor-actions">
+        <span class="spacer"></span>
+        <button type="submit" class="text-btn">Done</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
