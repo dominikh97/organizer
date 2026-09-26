@@ -4,8 +4,9 @@ A simple, Google Keep–style notes organizer that runs entirely in the browser.
 
 ## Features
 
-- Quick note composer ("Take a note…") with title and body
-- Checklists: turn a note into a checklist and back, tick items off right on the card
+- Quick note composer ("Take a note…") with title and body. Notes can be as many lines as you like
+- Clickable links: web addresses (`https://…` or `www.…`), email addresses, and named links written as `[text](https://…)`
+- Checklists: turn a note into a checklist and back, tick items off right on the card. Enter adds a new item, Shift+Enter adds a line break inside an item
 - Pinned notes shown in their own section
 - 10 background colors: pick one with the 🎨 button on a note, in the note editor, or while writing a new note
 - Labels: create, rename and delete them in "Edit labels", filter by label from the sidebar

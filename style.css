@@ -178,8 +178,10 @@ input, textarea { font: inherit; color: inherit; background: transparent; }
 .note .body {
   white-space: pre-wrap;
   font-size: 0.9rem;
-  max-height: 20em;
+  max-height: 30em;
   overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, #000 26em, transparent 30em);
+  mask-image: linear-gradient(to bottom, #000 26em, transparent 30em);
 }
 .note .pin {
   position: absolute;
@@ -212,9 +214,18 @@ input, textarea { font: inherit; color: inherit; background: transparent; }
 /* Checklists */
 .checklist { list-style: none; padding: 0; margin: 0; font-size: 0.9rem; }
 .checklist li { display: flex; align-items: flex-start; gap: 8px; padding: 2px 0; }
-.checklist li.done span, .checklist li.done input[type="text"] { text-decoration: line-through; color: var(--muted); }
+.checklist .item-text { white-space: pre-wrap; }
+.checklist li.done .item-text { text-decoration: line-through; color: var(--muted); }
 .checklist input[type="checkbox"] { margin-top: 3px; }
-.checklist.editing input[type="text"] { flex: 1; border: none; outline: none; padding: 2px 0; }
+.checklist.editing .item-text, .checklist.editing .add-item {
+  flex: 1;
+  width: 100%;
+  border: none;
+  outline: none;
+  resize: none;
+  padding: 2px 0;
+  overflow: hidden;
+}
 .checklist.editing .remove { border: none; background: none; color: var(--muted); }
 
 /* Colors */
@@ -302,3 +313,10 @@ input, textarea { font: inherit; color: inherit; background: transparent; }
   .content { padding: 16px 16px 64px; }
   .note .note-actions, .note .pin { opacity: 1; }
 }
+
+/* Links */
+.note a, .editor-links a { color: #1a73e8; text-decoration: underline; overflow-wrap: anywhere; }
+:root[data-theme="dark"] .note a, :root[data-theme="dark"] .editor-links a { color: #8ab4f8; }
+.editor-links { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; padding-top: 8px; border-top: 1px solid rgba(0, 0, 0, 0.1); }
+:root[data-theme="dark"] .editor-links { border-top-color: rgba(255, 255, 255, 0.15); }
+.editor-links .link-row { font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

@@ -24,7 +24,7 @@ function load() {
   return {
     labels: ['Personal', 'Work'],
     notes: [
-      newNote({ title: 'Welcome to Organizer 👋', body: 'Click a note to edit it.\nPin, color, label, archive or delete notes with the buttons below each card.\nEverything is saved in your browser.', color: 'yellow', pinned: true }),
+      newNote({ title: 'Welcome to Organizer 👋', body: 'Click a note to edit it.\nPin, color, label, archive or delete notes with the buttons below each card.\nLinks like https://example.com are clickable.\nEverything is saved in your browser.', color: 'yellow', pinned: true }),
       newNote({ title: 'Groceries', items: [{ text: 'Milk', done: true }, { text: 'Bread', done: false }, { text: 'Coffee', done: false }], labels: ['Personal'], color: 'green' }),
     ],
   };
@@ -162,7 +162,7 @@ function renderCard(note) {
 
   if (note.title) {
     const h = document.createElement('h3');
-    h.textContent = note.title;
+    h.append(linkify(note.title));
     card.append(h);
   }
 
@@ -185,7 +185,8 @@ function renderCard(note) {
         update(note, {});
       });
       const span = document.createElement('span');
-      span.textContent = item.text;
+      span.className = 'item-text';
+      span.append(linkify(item.text));
       li.append(cb, span);
       ul.append(li);
     });
@@ -198,7 +199,7 @@ function renderCard(note) {
   } else if (note.body) {
     const div = document.createElement('div');
     div.className = 'body';
-    div.textContent = note.body;
+    div.append(linkify(note.body));
     card.append(div);
   }
 
@@ -228,6 +229,45 @@ function renderCard(note) {
   });
   addDragHandlers(card);
   return card;
+}
+
+// Matches [label](url) links, bare web addresses and email addresses.
+const LINK_RE = /\[([^\]\n]+)\]\(((?:https?:\/\/|mailto:)[^\s)]+)\)|((?:https?:\/\/|www\.)[^\s<>"]*[^\s<>".,:;!?')\]])|([\w.+-]+@[\w-]+(?:\.[\w-]+)*\.[a-z]{2,})/gi;
+
+function findLinks(text) {
+  const links = [];
+  for (const m of text.matchAll(LINK_RE)) {
+    const [whole, label, labelUrl, bare, email] = m;
+    let href;
+    if (labelUrl) href = labelUrl;
+    else if (bare) href = /^www\./i.test(bare) ? 'https://' + bare : bare;
+    else href = 'mailto:' + email;
+    links.push({ index: m.index, length: whole.length, text: label || bare || email, href });
+  }
+  return links;
+}
+
+function linkElement(link) {
+  const a = document.createElement('a');
+  a.href = link.href;
+  a.textContent = link.text;
+  a.target = '_blank';
+  a.rel = 'noopener noreferrer';
+  // Follow the link instead of opening the note editor.
+  a.addEventListener('click', (e) => e.stopPropagation());
+  return a;
+}
+
+// Turn plain text into a fragment where links are clickable.
+function linkify(text) {
+  const frag = document.createDocumentFragment();
+  let pos = 0;
+  for (const link of findLinks(text)) {
+    frag.append(text.slice(pos, link.index), linkElement(link));
+    pos = link.index + link.length;
+  }
+  frag.append(text.slice(pos));
+  return frag;
 }
 
 function iconButton(glyph, title, extraClass, onClick) {
@@ -298,6 +338,7 @@ function setComposerColor(color) {
 
 function expandComposer() {
   newTitle.hidden = false;
+  newBody.rows = 3;
   composer.querySelector('.composer-actions').hidden = false;
 }
 
@@ -313,6 +354,7 @@ function collapseComposer() {
   newTitle.value = '';
   newBody.value = '';
   newBody.style.height = '';
+  newBody.rows = 1;
   newTitle.hidden = true;
   composer.querySelector('.composer-actions').hidden = true;
   setComposerColor('default');
@@ -374,11 +416,29 @@ function openEditor(id) {
   renderEditorChecklist();
   editor.showModal();
   if (note.items) {
-    const inputs = editChecklist.querySelectorAll('input[type="text"]');
+    const inputs = editChecklist.querySelectorAll('.item-text');
     inputs[inputs.length - 1]?.focus();
   } else {
     autoGrow(editBody);
   }
+}
+
+// Clickable list of the links in the note, since links inside a text field can't be clicked.
+function renderEditorLinks() {
+  const note = currentNote();
+  const box = $('#editLinks');
+  if (!note) return;
+  const text = [note.title, note.body, ...(note.items || []).map((i) => i.text)].join('\n');
+  const seen = new Set();
+  const links = findLinks(text).filter((l) => !seen.has(l.href) && seen.add(l.href));
+  box.replaceChildren(...links.map((link) => {
+    const row = linkElement(link);
+    row.className = 'link-row';
+    row.textContent = '🔗 ' + link.text;
+    row.title = link.href;
+    return row;
+  }));
+  box.hidden = links.length === 0;
 }
 
 function currentNote() {
@@ -404,6 +464,7 @@ function renderEditorChrome() {
   $('#editLabels').replaceChildren(...(note.labels.length ? [chips(note.labels)] : []));
   const fmt = (t) => new Date(t).toLocaleString();
   $('#editMeta').textContent = inTrash ? 'Note in Trash' : `Edited ${fmt(note.updated)}`;
+  renderEditorLinks();
 }
 
 function renderEditorChecklist() {
@@ -425,27 +486,31 @@ function renderEditorChecklist() {
       li.classList.toggle('done', item.done);
       touch(note);
     });
-    const text = document.createElement('input');
-    text.type = 'text';
+    const text = document.createElement('textarea');
+    text.className = 'item-text';
+    text.rows = 1;
     text.value = item.text;
     text.readOnly = inTrash;
     text.addEventListener('input', () => {
       item.text = text.value;
+      autoGrow(text);
       touch(note);
+      renderEditorLinks();
     });
     text.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
+      // Enter starts a new item; Shift+Enter adds a line break inside this one.
+      if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         note.items.splice(idx + 1, 0, { text: '', done: false });
         touch(note);
         renderEditorChecklist();
-        editChecklist.querySelectorAll('input[type="text"]')[idx + 1].focus();
+        editChecklist.querySelectorAll('.item-text')[idx + 1].focus();
       } else if (e.key === 'Backspace' && !text.value && note.items.length > 1) {
         e.preventDefault();
         note.items.splice(idx, 1);
         touch(note);
         renderEditorChecklist();
-        editChecklist.querySelectorAll('input[type="text"]')[Math.max(0, idx - 1)].focus();
+        editChecklist.querySelectorAll('.item-text')[Math.max(0, idx - 1)].focus();
       }
     });
     li.append(cb, text);
@@ -468,13 +533,14 @@ function renderEditorChecklist() {
     const addLi = document.createElement('li');
     const add = document.createElement('input');
     add.type = 'text';
+    add.className = 'add-item';
     add.placeholder = '+ List item';
     add.addEventListener('input', () => {
       note.items.push({ text: add.value, done: false });
       touch(note);
       renderEditorChecklist();
-      const inputs = editChecklist.querySelectorAll('input[type="text"]');
-      const target = inputs[inputs.length - 2];
+      const inputs = editChecklist.querySelectorAll('.item-text');
+      const target = inputs[inputs.length - 1];
       target.focus();
       target.setSelectionRange(target.value.length, target.value.length);
     });
@@ -482,6 +548,7 @@ function renderEditorChecklist() {
     rows.push(addLi);
   }
   editChecklist.replaceChildren(...rows);
+  editChecklist.querySelectorAll('.item-text').forEach(autoGrow);
 }
 
 // Persist an in-place edit without re-rendering the editor.
@@ -495,12 +562,14 @@ editTitle.addEventListener('input', () => {
   const note = currentNote();
   note.title = editTitle.value;
   touch(note);
+  renderEditorLinks();
 });
 editBody.addEventListener('input', () => {
   const note = currentNote();
   note.body = editBody.value;
   autoGrow(editBody);
   touch(note);
+  renderEditorLinks();
 });
 
 editor.addEventListener('close', () => {
