@@ -218,16 +218,17 @@ input, textarea { font: inherit; color: inherit; background: transparent; }
 .checklist.editing .remove { border: none; background: none; color: var(--muted); }
 
 /* Colors */
-.note[data-color="red"], .editor[data-color="red"] { background: var(--note-red); }
-.note[data-color="orange"], .editor[data-color="orange"] { background: var(--note-orange); }
-.note[data-color="yellow"], .editor[data-color="yellow"] { background: var(--note-yellow); }
-.note[data-color="green"], .editor[data-color="green"] { background: var(--note-green); }
-.note[data-color="teal"], .editor[data-color="teal"] { background: var(--note-teal); }
-.note[data-color="blue"], .editor[data-color="blue"] { background: var(--note-blue); }
-.note[data-color="purple"], .editor[data-color="purple"] { background: var(--note-purple); }
-.note[data-color="pink"], .editor[data-color="pink"] { background: var(--note-pink); }
-.note[data-color="gray"], .editor[data-color="gray"] { background: var(--note-gray); }
-.note[data-color]:not([data-color="default"]) { border-color: transparent; }
+:is(.note, .editor, .composer)[data-color="red"] { background: var(--note-red); }
+:is(.note, .editor, .composer)[data-color="orange"] { background: var(--note-orange); }
+:is(.note, .editor, .composer)[data-color="yellow"] { background: var(--note-yellow); }
+:is(.note, .editor, .composer)[data-color="green"] { background: var(--note-green); }
+:is(.note, .editor, .composer)[data-color="teal"] { background: var(--note-teal); }
+:is(.note, .editor, .composer)[data-color="blue"] { background: var(--note-blue); }
+:is(.note, .editor, .composer)[data-color="purple"] { background: var(--note-purple); }
+:is(.note, .editor, .composer)[data-color="pink"] { background: var(--note-pink); }
+:is(.note, .editor, .composer)[data-color="gray"] { background: var(--note-gray); }
+:is(.note, .composer)[data-color]:not([data-color="default"]) { border-color: transparent; }
+.palette.floating { position: fixed; bottom: auto; z-index: 50; }
 
 /* Editor dialog */
 .editor {

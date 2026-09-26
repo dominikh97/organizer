@@ -7,7 +7,7 @@ A simple, Google Keep–style notes organizer that runs entirely in the browser.
 - Quick note composer ("Take a note…") with title and body
 - Checklists: turn a note into a checklist and back, tick items off right on the card
 - Pinned notes shown in their own section
-- 10 background colors
+- 10 background colors: pick one with the 🎨 button on a note, in the note editor, or while writing a new note
 - Labels: create, rename and delete them in "Edit labels", filter by label from the sidebar
 - Archive, and a Trash that empties itself after 7 days
 - Undo for archive and delete

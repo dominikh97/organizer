@@ -213,6 +213,9 @@ function renderCard(note) {
     );
   } else {
     actions.append(
+      iconButton('🎨', 'Background color', '', (btn) => {
+        openFloatPalette(btn, note.color, (color) => update(note, { color }));
+      }),
       iconButton(note.archived ? '📤' : '📦', note.archived ? 'Unarchive' : 'Archive', '', () => toggleArchive(note)),
       iconButton('🗑️', 'Delete', '', () => trash(note)),
     );
@@ -236,7 +239,7 @@ function iconButton(glyph, title, extraClass, onClick) {
   b.textContent = glyph;
   b.addEventListener('click', (e) => {
     e.stopPropagation();
-    onClick();
+    onClick(b);
   });
   return b;
 }
@@ -286,6 +289,12 @@ function deleteForever(note) {
 const composer = $('#composer');
 const newTitle = $('#newTitle');
 const newBody = $('#newBody');
+let composerColor = 'default';
+
+function setComposerColor(color) {
+  composerColor = color;
+  composer.dataset.color = color;
+}
 
 function expandComposer() {
   newTitle.hidden = false;
@@ -297,7 +306,7 @@ function collapseComposer() {
   const body = newBody.value;
   if (title.trim() || body.trim()) {
     const labels = view.startsWith('label:') ? [view.slice(6)] : [];
-    state.notes.push(newNote({ title, body, labels }));
+    state.notes.push(newNote({ title, body, labels, color: composerColor }));
     save();
     render();
   }
@@ -306,6 +315,7 @@ function collapseComposer() {
   newBody.style.height = '';
   newTitle.hidden = true;
   composer.querySelector('.composer-actions').hidden = true;
+  setComposerColor('default');
 }
 
 newBody.addEventListener('focus', expandComposer);
@@ -315,7 +325,13 @@ composer.addEventListener('submit', (e) => {
   collapseComposer();
 });
 document.addEventListener('mousedown', (e) => {
+  if (floatPalette.contains(e.target)) return;
+  if (!floatPalette.hidden && e.target.closest('.icon-btn') !== floatPalette.anchor) floatPalette.hidden = true;
   if (!newTitle.hidden && !composer.contains(e.target) && !$('#editor').open) collapseComposer();
+});
+
+$('#newColorBtn').addEventListener('click', (e) => {
+  openFloatPalette(e.currentTarget, composerColor, setComposerColor);
 });
 
 $('#newChecklistBtn').addEventListener('click', () => {
@@ -326,6 +342,7 @@ $('#newChecklistBtn').addEventListener('click', () => {
     title: newTitle.value,
     items: lines.length ? lines.map((text) => ({ text, done: false })) : [{ text: '', done: false }],
     labels,
+    color: composerColor,
   });
   state.notes.push(note);
   newTitle.value = '';
@@ -540,25 +557,60 @@ $('#toggleListBtn').addEventListener('click', () => {
   if (!note.items) autoGrow(editBody);
 });
 
-// Color palette
-const palette = $('#palette');
-COLORS.forEach((color) => {
-  const s = document.createElement('button');
-  s.type = 'button';
-  s.className = 'swatch';
-  s.dataset.color = color;
-  s.title = color[0].toUpperCase() + color.slice(1);
-  s.style.background = `var(--note-${color})`;
-  s.addEventListener('click', () => update(currentNote(), { color }));
-  palette.append(s);
+// Color palettes
+
+// Fill a palette element with one swatch per color; the current color is highlighted.
+function fillSwatches(container, current, onPick) {
+  container.replaceChildren(...COLORS.map((color) => {
+    const s = document.createElement('button');
+    s.type = 'button';
+    s.className = 'swatch';
+    s.dataset.color = color;
+    s.classList.toggle('selected', color === current);
+    s.title = color[0].toUpperCase() + color.slice(1);
+    s.setAttribute('aria-label', s.title);
+    s.style.background = `var(--note-${color})`;
+    s.addEventListener('click', (e) => {
+      e.stopPropagation();
+      onPick(color);
+      container.querySelectorAll('.swatch').forEach((x) => x.classList.toggle('selected', x === s));
+    });
+    return s;
+  }));
+}
+
+// Palette shown next to a note card's or the composer's color button.
+const floatPalette = $('#floatPalette');
+
+function openFloatPalette(anchor, current, onPick) {
+  if (!floatPalette.hidden && floatPalette.anchor === anchor) {
+    floatPalette.hidden = true;
+    return;
+  }
+  fillSwatches(floatPalette, current, onPick);
+  floatPalette.anchor = anchor;
+  floatPalette.hidden = false;
+  const r = anchor.getBoundingClientRect();
+  const w = floatPalette.offsetWidth;
+  const h = floatPalette.offsetHeight;
+  const left = Math.min(Math.max(8, r.left), window.innerWidth - w - 8);
+  const top = r.bottom + h + 8 > window.innerHeight ? r.top - h - 4 : r.bottom + 4;
+  floatPalette.style.left = left + 'px';
+  floatPalette.style.top = Math.max(8, top) + 'px';
+}
+
+window.addEventListener('scroll', () => { floatPalette.hidden = true; }, true);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') floatPalette.hidden = true;
 });
+
+// Palette inside the note editor.
+const palette = $('#palette');
 
 $('#colorBtn').addEventListener('click', () => {
   $('#labelPicker').hidden = true;
   palette.hidden = !palette.hidden;
-  palette.querySelectorAll('.swatch').forEach((s) => {
-    s.classList.toggle('selected', s.dataset.color === currentNote().color);
-  });
+  if (!palette.hidden) fillSwatches(palette, currentNote().color, (color) => update(currentNote(), { color }));
 });
 
 // Label picker
