@@ -43,3 +43,7 @@ Notes stay in each browser's local storage. Use **Export backup** and **Import b
 | `index.html` | Page layout, the editor and the label dialogs |
 | `style.css`  | Styling, note colors, light and dark themes |
 | `app.js`     | State, storage, rendering and interactions  |
+
+## Releasing changes
+
+`index.html` loads `style.css?v=N` and `app.js?v=N`. When you change either file, increase `N` in `index.html`. Otherwise browsers can keep running the old cached script or styles with the new page, and new buttons won't respond.
