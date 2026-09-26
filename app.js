@@ -420,6 +420,8 @@ $('#newChecklistBtn').addEventListener('click', () => {
 });
 
 function autoGrow(el) {
+  // A hidden box has nothing to measure; it is sized again once shown.
+  if (!el.getClientRects().length) return;
   // Resizing briefly collapses the box, so keep scroll positions from jumping.
   const scroller = el.closest('.editor-scroll');
   const outerTop = scroller ? scroller.scrollTop : 0;
@@ -446,13 +448,19 @@ function openEditor(id) {
   renderEditorChrome();
   renderEditorChecklist();
   editor.showModal();
+  growEditorFields();
   editor.querySelector('.editor-scroll').scrollTop = 0;
   if (note.items) {
     const inputs = editChecklist.querySelectorAll('.item-text');
     inputs[inputs.length - 1]?.focus();
-  } else {
-    autoGrow(editBody);
   }
+}
+
+// Fit the note text and every checklist item to its content.
+function growEditorFields() {
+  if (!editor.open) return;
+  if (!editBody.hidden) autoGrow(editBody);
+  editChecklist.querySelectorAll('.item-text').forEach(autoGrow);
 }
 
 // Clickable list of the links in the note, since links inside a text field can't be clicked.
@@ -636,8 +644,12 @@ try {
 $('#expandBtn').addEventListener('click', () => {
   const on = !editor.classList.contains('fullscreen');
   setEditorFullscreen(on);
+  growEditorFields();
   try { localStorage.setItem(FULLSCREEN_KEY, on ? '1' : '0'); } catch (e) { /* ignore */ }
 });
+
+// Text rewraps when the window size changes, so refit it.
+window.addEventListener('resize', growEditorFields);
 
 // Close when clicking the backdrop.
 editor.addEventListener('mousedown', (e) => {
