@@ -3,10 +3,22 @@
 const STORAGE_KEY = 'organizer.v1';
 const THEME_KEY = 'organizer.theme';
 const FULLSCREEN_KEY = 'organizer.editorFullscreen';
+const LAYOUT_KEY = 'organizer.layout';
 const TRASH_DAYS = 7;
 const COLORS = ['default', 'red', 'orange', 'yellow', 'green', 'teal', 'blue', 'purple', 'pink', 'gray'];
 
 const $ = (sel) => document.querySelector(sel);
+const isPhone = () => window.matchMedia('(max-width: 700px)').matches;
+// Touch screens without a mouse: no hover, no drag and drop.
+const isTouch = () => window.matchMedia('(hover: none)').matches;
+
+function storageGet(key) {
+  try { return localStorage.getItem(key); } catch (e) { return null; }
+}
+
+function storageSet(key, value) {
+  try { localStorage.setItem(key, value); } catch (e) { /* ignore */ }
+}
 
 // ---------- State & persistence ----------
 
@@ -113,6 +125,7 @@ function render() {
   $('#othersTitle').hidden = pinned.length === 0 || others.length === 0;
 
   $('#composer').hidden = view === 'archive' || view === 'trash';
+  $('#fabs').hidden = view === 'archive' || view === 'trash';
   $('#trashBar').hidden = view !== 'trash' || notes.length === 0;
 
   const empty = $('#emptyState');
@@ -153,7 +166,8 @@ function renderCard(note) {
   card.dataset.color = note.color;
   card.tabIndex = 0;
   const inTrash = !!note.trashedAt;
-  card.draggable = !inTrash && !query;
+  card.classList.toggle('in-trash', inTrash);
+  card.draggable = !inTrash && !query && !isTouch();
 
   if (!inTrash) {
     card.append(iconButton('📌', note.pinned ? 'Unpin' : 'Pin', 'pin' + (note.pinned ? ' on' : ''), () => {
@@ -208,7 +222,7 @@ function renderCard(note) {
         div.classList.add('clipped');
         const more = document.createElement('div');
         more.className = 'more';
-        more.textContent = 'Click to read more…';
+        more.textContent = isTouch() ? 'Tap to read more…' : 'Click to read more…';
         div.after(more);
       }
     });
@@ -239,6 +253,7 @@ function renderCard(note) {
     if (e.key === 'Enter' && e.target === card) openEditor(note.id);
   });
   addDragHandlers(card);
+  if (!inTrash) addSwipeHandlers(card, note);
   return card;
 }
 
@@ -387,19 +402,26 @@ $('#newColorBtn').addEventListener('click', (e) => {
   openFloatPalette(e.currentTarget, composerColor, setComposerColor);
 });
 
+// Add a note and open it in the editor, ready for typing.
+function createAndEdit(fields) {
+  const labels = view.startsWith('label:') ? [view.slice(6)] : [];
+  const note = newNote({ labels, ...fields });
+  state.notes.push(note);
+  render();
+  openEditor(note.id, { focus: true });
+}
+
 // Move the draft into the large editor, which suits longer notes.
 $('#newExpandBtn').addEventListener('click', () => {
-  const labels = view.startsWith('label:') ? [view.slice(6)] : [];
-  const note = newNote({ title: newTitle.value, body: newBody.value, labels, color: composerColor });
-  state.notes.push(note);
+  const fields = { title: newTitle.value, body: newBody.value, color: composerColor };
   newTitle.value = '';
   newBody.value = '';
   collapseComposer();
-  render();
-  openEditor(note.id);
-  editBody.focus();
-  editBody.setSelectionRange(editBody.value.length, editBody.value.length);
+  createAndEdit(fields);
 });
+
+$('#fabNote').addEventListener('click', () => createAndEdit({}));
+$('#fabList').addEventListener('click', () => createAndEdit({ items: [{ text: '', done: false }] }));
 
 $('#newChecklistBtn').addEventListener('click', () => {
   // Turn whatever was typed into checklist items and open the full editor.
@@ -439,7 +461,9 @@ const editTitle = $('#editTitle');
 const editBody = $('#editBody');
 const editChecklist = $('#editChecklist');
 
-function openEditor(id) {
+// focus: true puts the cursor in the note for typing straight away. Otherwise
+// touch devices open the note for reading, without popping up the keyboard.
+function openEditor(id, { focus = false } = {}) {
   const note = findNote(id);
   if (!note) return;
   editingId = id;
@@ -448,11 +472,16 @@ function openEditor(id) {
   renderEditorChrome();
   renderEditorChecklist();
   editor.showModal();
+  replaceDrawerWith('editor');
   growEditorFields();
   editor.querySelector('.editor-scroll').scrollTop = 0;
-  if (note.items) {
-    const inputs = editChecklist.querySelectorAll('.item-text');
-    inputs[inputs.length - 1]?.focus();
+  const inputs = editChecklist.querySelectorAll('.item-text');
+  const target = note.items ? inputs[inputs.length - 1] : editBody;
+  if (focus || (!isTouch() && note.items)) {
+    target?.focus();
+    if (target) target.setSelectionRange(target.value.length, target.value.length);
+  } else if (isTouch()) {
+    document.activeElement?.blur();
   }
 }
 
@@ -502,7 +531,7 @@ function renderEditorChrome() {
     $(s).hidden = inTrash;
   });
   $('#editLabels').replaceChildren(...(note.labels.length ? [chips(note.labels)] : []));
-  const fmt = (t) => new Date(t).toLocaleString();
+  const fmt = (t) => new Date(t).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
   $('#editMeta').textContent = inTrash ? 'Note in Trash' : `Edited ${fmt(note.updated)}`;
   renderEditorLinks();
 }
@@ -615,6 +644,7 @@ editBody.addEventListener('input', () => {
 editor.addEventListener('close', () => {
   const note = currentNote();
   editingId = null;
+  popOverlay('editor');
   $('#palette').hidden = true;
   $('#labelPicker').hidden = true;
   if (!note) return;
@@ -650,6 +680,21 @@ $('#expandBtn').addEventListener('click', () => {
 
 // Text rewraps when the window size changes, so refit it.
 window.addEventListener('resize', growEditorFields);
+
+$('#backBtn').addEventListener('click', () => editor.close());
+
+// On phones the on-screen keyboard shrinks the visible area; size the editor to
+// it so the toolbar stays above the keyboard.
+if (window.visualViewport) {
+  const fitViewport = () => {
+    const vv = window.visualViewport;
+    document.documentElement.style.setProperty('--vv-height', vv.height + 'px');
+    document.documentElement.style.setProperty('--vv-top', vv.offsetTop + 'px');
+  };
+  window.visualViewport.addEventListener('resize', fitViewport);
+  window.visualViewport.addEventListener('scroll', fitViewport);
+  fitViewport();
+}
 
 // Close when clicking the backdrop.
 editor.addEventListener('mousedown', (e) => {
@@ -781,8 +826,11 @@ const labelDialog = $('#labelDialog');
 $('#editLabelsBtn').addEventListener('click', () => {
   renderLabelList();
   labelDialog.showModal();
-  $('#newLabel').focus();
+  replaceDrawerWith('labels');
+  if (!isTouch()) $('#newLabel').focus();
 });
+
+labelDialog.addEventListener('close', () => popOverlay('labels'));
 
 function addLabel() {
   const input = $('#newLabel');
@@ -889,16 +937,162 @@ function addDragHandlers(card) {
 
 // ---------- Sidebar, search, theme ----------
 
-$('#sidebar').addEventListener('click', (e) => {
+// On phones the sidebar is a drawer that slides over the notes.
+const sidebar = $('#sidebar');
+const scrim = $('#scrim');
+
+function drawerOpen() {
+  return isPhone() && !sidebar.classList.contains('collapsed');
+}
+
+function openDrawer() {
+  sidebar.classList.remove('collapsed');
+  scrim.hidden = false;
+  pushOverlay('drawer');
+}
+
+function closeDrawer() {
+  if (!drawerOpen()) return;
+  sidebar.classList.add('collapsed');
+  scrim.hidden = true;
+  popOverlay('drawer');
+}
+
+sidebar.addEventListener('click', (e) => {
   const item = e.target.closest('.nav-item[data-view]');
   if (!item) return;
   view = item.dataset.view;
-  if (window.matchMedia('(max-width: 700px)').matches) $('#sidebar').classList.add('collapsed');
+  closeDrawer();
   render();
+  window.scrollTo(0, 0);
 });
 
-$('#menuBtn').addEventListener('click', () => $('#sidebar').classList.toggle('collapsed'));
-if (window.matchMedia('(max-width: 700px)').matches) $('#sidebar').classList.add('collapsed');
+$('#menuBtn').addEventListener('click', () => {
+  if (!isPhone()) sidebar.classList.toggle('collapsed');
+  else if (drawerOpen()) closeDrawer();
+  else openDrawer();
+});
+scrim.addEventListener('click', closeDrawer);
+if (isPhone()) sidebar.classList.add('collapsed');
+requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.add('ready')));
+
+// ---------- Back button ----------
+
+// Open overlays (editor, drawer, label dialog) add a history entry, so the
+// phone's Back button closes them instead of leaving the app.
+let skipPop = 0;
+
+function pushOverlay(name) {
+  try { history.pushState({ overlay: name }, ''); } catch (e) { /* ignore */ }
+}
+
+// Open an overlay; if the drawer is open, it closes and hands over its history entry.
+function replaceDrawerWith(name) {
+  if (drawerOpen()) {
+    sidebar.classList.add('collapsed');
+    scrim.hidden = true;
+    try { history.replaceState({ overlay: name }, ''); } catch (e) { /* ignore */ }
+  } else {
+    pushOverlay(name);
+  }
+}
+
+// Called when an overlay closes some other way; drop its history entry.
+function popOverlay(name) {
+  if (history.state && history.state.overlay === name) {
+    skipPop++;
+    history.back();
+  }
+}
+
+window.addEventListener('popstate', () => {
+  if (skipPop) {
+    skipPop--;
+    return;
+  }
+  if (editor.open) editor.close();
+  else if (labelDialog.open) labelDialog.close();
+  else if (drawerOpen()) {
+    sidebar.classList.add('collapsed');
+    scrim.hidden = true;
+  }
+});
+
+// ---------- Swipe to archive (touch) ----------
+
+function addSwipeHandlers(card, note) {
+  let startX = 0;
+  let startY = 0;
+  let dx = 0;
+  let swiping = false;
+  let tracking = false;
+
+  card.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'touch' || e.target.closest('a, input, button')) return;
+    tracking = true;
+    swiping = false;
+    startX = e.clientX;
+    startY = e.clientY;
+    dx = 0;
+  });
+  card.addEventListener('pointermove', (e) => {
+    if (!tracking) return;
+    dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    if (!swiping) {
+      if (Math.abs(dy) > 10) { tracking = false; return; }
+      if (Math.abs(dx) < 12) return;
+      swiping = true;
+      card.setPointerCapture(e.pointerId);
+      card.classList.add('swiping');
+    }
+    card.style.transform = `translateX(${dx}px)`;
+    card.style.opacity = String(Math.max(0.2, 1 - Math.abs(dx) / card.offsetWidth));
+  });
+  const end = () => {
+    if (!tracking) return;
+    tracking = false;
+    if (!swiping) return;
+    card.classList.remove('swiping');
+    // Swallow the click the browser sends after the finger lifts.
+    card.addEventListener('click', (ev) => ev.stopImmediatePropagation(), { capture: true, once: true });
+    setTimeout(() => { swiping = false; }, 0);
+    if (Math.abs(dx) > card.offsetWidth * 0.35) {
+      card.style.transition = 'transform 0.15s, opacity 0.15s';
+      card.style.transform = `translateX(${dx > 0 ? '' : '-'}110%)`;
+      card.style.opacity = '0';
+      setTimeout(() => toggleArchive(note), 150);
+    } else {
+      card.style.transition = 'transform 0.15s, opacity 0.15s';
+      card.style.transform = '';
+      card.style.opacity = '';
+    }
+  };
+  card.addEventListener('pointerup', end);
+  card.addEventListener('pointercancel', () => {
+    tracking = false;
+    swiping = false;
+    card.classList.remove('swiping');
+    card.style.transform = '';
+    card.style.opacity = '';
+  });
+}
+
+// ---------- Layout (grid or list) ----------
+
+function applyLayout(layout) {
+  document.body.classList.toggle('list-view', layout === 'list');
+  const btn = $('#layoutBtn');
+  btn.textContent = layout === 'list' ? '▦' : '▤';
+  btn.title = layout === 'list' ? 'Grid view' : 'List view';
+}
+
+applyLayout(storageGet(LAYOUT_KEY) || 'grid');
+$('#layoutBtn').addEventListener('click', () => {
+  const next = document.body.classList.contains('list-view') ? 'grid' : 'list';
+  applyLayout(next);
+  storageSet(LAYOUT_KEY, next);
+});
 
 $('#search').addEventListener('input', (e) => {
   query = e.target.value;
@@ -914,6 +1108,10 @@ $('#emptyTrashBtn').addEventListener('click', () => {
 
 function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
+  // Match the phone's status bar to the chosen theme.
+  document.querySelectorAll('meta[name="theme-color"]').forEach((m) => {
+    m.content = theme === 'dark' ? '#202124' : '#ffffff';
+  });
 }
 
 function storedTheme() {
@@ -976,13 +1174,18 @@ function toast(message, undo) {
     b.textContent = 'Undo';
     b.addEventListener('click', () => {
       el.hidden = true;
+      document.body.classList.remove('toast-open');
       undo();
     });
     el.append(b);
   }
   el.hidden = false;
+  document.body.classList.add('toast-open');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { el.hidden = true; }, 5000);
+  toastTimer = setTimeout(() => {
+    el.hidden = true;
+    document.body.classList.remove('toast-open');
+  }, 5000);
 }
 
 // ---------- Keyboard shortcuts ----------
@@ -1004,3 +1207,8 @@ document.addEventListener('keydown', (e) => {
 purgeOldTrash();
 save();
 render();
+
+// Offline support and "Add to Home Screen" (only works when served over http/https).
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  navigator.serviceWorker.register('sw.js').catch(() => { /* offline support is optional */ });
+}

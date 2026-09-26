@@ -2,17 +2,27 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Organizer</title>
-  <link rel="stylesheet" href="style.css?v=6">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#202124" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Organizer">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
   <header class="topbar">
     <button class="icon-btn" id="menuBtn" title="Menu" aria-label="Toggle menu">☰</button>
     <h1 class="brand">📒 Organizer</h1>
     <input type="search" id="search" placeholder="Search notes" aria-label="Search notes">
+    <button class="icon-btn" id="layoutBtn" title="List view" aria-label="Switch between grid and list view">▤</button>
     <button class="icon-btn" id="themeBtn" title="Toggle dark mode" aria-label="Toggle dark mode">🌓</button>
   </header>
+  <div class="scrim" id="scrim" hidden></div>
 
   <div class="layout">
     <nav class="sidebar" id="sidebar">
@@ -60,6 +70,7 @@
   <dialog id="editor" class="editor">
     <form method="dialog" id="editorForm" class="editor-form">
       <div class="editor-head">
+        <button type="button" class="icon-btn" id="backBtn" title="Back" aria-label="Close note">←</button>
         <input type="text" id="editTitle" placeholder="Title" class="editor-title">
         <button type="button" class="icon-btn" id="expandBtn" title="Full screen" aria-label="Toggle full screen">⤢</button>
       </div>
@@ -107,8 +118,14 @@
 
   <div class="palette floating" id="floatPalette" hidden></div>
 
+  <!-- Quick-add buttons, shown on phones -->
+  <div class="fabs" id="fabs">
+    <button type="button" class="fab small" id="fabList" title="New list" aria-label="New list">☑️</button>
+    <button type="button" class="fab" id="fabNote" title="New note" aria-label="New note">＋</button>
+  </div>
+
   <div id="toast" class="toast" hidden></div>
 
-  <script src="app.js?v=6"></script>
+  <script src="app.js?v=7"></script>
 </body>
 </html>

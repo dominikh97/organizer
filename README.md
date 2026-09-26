@@ -19,6 +19,15 @@ A simple, Google Keep–style notes organizer that runs entirely in the browser.
 - Export and import a JSON backup
 - Keyboard shortcuts: `/` focuses search, `c` starts a new note
 
+## On your phone
+
+- Notes show in two columns. The ▤ button switches to a one-column list (it works on desktop too)
+- Tap ＋ for a new note or ☑️ for a new list
+- Swipe a note left or right to archive it. Undo appears at the bottom
+- Tapping a note opens it for reading, without popping up the keyboard. Tap the text to edit
+- ← or your phone's Back button closes a note or the menu
+- **Install it like an app:** open the site in Chrome (Android) and choose *Add to Home screen*, or in Safari (iPhone) tap *Share → Add to Home Screen*. It then opens full screen, and keeps working without an internet connection
+
 ## Run locally
 
 Open `index.html` in a browser, or serve the folder:

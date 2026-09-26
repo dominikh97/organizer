@@ -344,16 +344,141 @@ input, textarea { font: inherit; color: inherit; background: transparent; }
 }
 .toast button { background: none; border: none; color: #fbbc04; font-weight: 500; }
 
+/* Taps respond immediately, without the grey flash or double-tap zoom. */
+button, a, .note, .nav-item { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+
+/* List view: one note per row. */
+.list-view .grid { columns: 1; max-width: 680px; margin: 0 auto; }
+
+/* Quick-add buttons and drawer backdrop, used on phones only. */
+.fabs { display: none; }
+.scrim { display: none; }
+#backBtn { display: none; }
+
+/* Touch screens: no hover, so card buttons would stay visible and crowd the
+   notes. Notes are opened, swiped, or managed from the editor instead. */
+@media (hover: none) {
+  .note .note-actions, .note .pin { display: none; }
+  .note .pin.on { display: block; opacity: 1; pointer-events: none; background: none; width: 28px; height: 28px; font-size: 0.8rem; }
+  .note.in-trash .note-actions { display: flex; opacity: 1; }
+  .note { touch-action: pan-y; }
+  .note.swiping { transition: none; box-shadow: var(--shadow); }
+}
+
 @media (max-width: 700px) {
   .brand { display: none; }
-  .sidebar { position: fixed; z-index: 20; background: var(--bg); left: 0; box-shadow: var(--shadow); }
-  .sidebar.collapsed { display: none; }
-  .content { padding: 16px 16px 64px; }
-  .note .note-actions, .note .pin { opacity: 1; }
-  /* The editor fills the screen on phones. */
-  #editor { width: 100vw; max-width: 100vw; height: 100dvh; max-height: 100dvh; border-radius: 0; }
+  .topbar {
+    gap: 4px;
+    padding: calc(6px + env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) 6px max(8px, env(safe-area-inset-left));
+  }
+  #search { padding: 10px 14px; min-width: 0; }
+  .icon-btn { width: 44px; height: 44px; }
+
+  /* Drawer that slides in over the notes. */
+  .sidebar {
+    position: fixed;
+    z-index: 30;
+    top: 0;
+    left: 0;
+    height: 100dvh;
+    width: min(300px, 85vw);
+    padding-top: calc(12px + env(safe-area-inset-top));
+    background: var(--bg);
+    box-shadow: 0 0 24px rgba(0, 0, 0, 0.3);
+    transform: translateX(0);
+    overscroll-behavior: contain;
+  }
+  .sidebar.collapsed { width: min(300px, 85vw); transform: translateX(-105%); visibility: hidden; }
+  /* Animate only after the first paint, so the drawer doesn't slide away on load. */
+  .ready .sidebar { transition: transform 0.2s ease-out, visibility 0.2s; }
+  .sidebar.collapsed .lbl { display: inline; }
+  .nav-item { padding: 14px 24px; }
+  .scrim { display: block; position: fixed; inset: 0; z-index: 25; background: rgba(0, 0, 0, 0.4); }
+  .scrim[hidden] { display: none; }
+
+  /* Notes: compact two-column grid; the ＋ buttons replace the composer. */
+  .content { padding: 12px 8px calc(96px + env(safe-area-inset-bottom)); }
+  .composer { display: none; }
+  .grid { columns: 2; column-gap: 8px; }
+  .list-view .grid { columns: 1; }
+  .note { margin-bottom: 8px; padding: 10px 12px; }
+  .note h3 { font-size: 0.95rem; margin-bottom: 6px; padding-right: 16px; }
+  .note .body { font-size: 0.85rem; max-height: 14em; }
+  .note .body.clipped {
+    -webkit-mask-image: linear-gradient(to bottom, #000 10em, transparent 14em);
+    mask-image: linear-gradient(to bottom, #000 10em, transparent 14em);
+  }
+  .note .checklist { font-size: 0.85rem; }
+  .note .checklist li { gap: 6px; }
+  .note .pin.on { position: absolute; top: 2px; right: 2px; }
+  .section-title { margin: 4px 0 6px 6px; }
+  #pinnedSection { margin-bottom: 16px; }
+  .empty { margin-top: 30vh; }
+
+  .fabs {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    position: fixed;
+    z-index: 15;
+    right: max(16px, env(safe-area-inset-right));
+    bottom: calc(16px + env(safe-area-inset-bottom));
+    transition: bottom 0.2s;
+  }
+  .fabs[hidden] { display: none; }
+  .toast-open .fabs { bottom: calc(80px + env(safe-area-inset-bottom)); }
+  .fab {
+    width: 56px;
+    height: 56px;
+    border: none;
+    border-radius: 16px;
+    background: var(--accent);
+    color: var(--fg);
+    font-size: 1.8rem;
+    line-height: 1;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+  .fab.small { width: 44px; height: 44px; font-size: 1.1rem; border-radius: 12px; background: var(--bg); }
+  :root[data-theme="dark"] .fab { background: #5f4b1a; }
+  :root[data-theme="dark"] .fab.small { background: var(--hover); }
+
+  .toast {
+    left: 8px;
+    right: 8px;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    justify-content: space-between;
+  }
+
+  /* The editor fills the visible screen, shrinking above the on-screen keyboard. */
+  #editor {
+    width: 100vw;
+    max-width: 100vw;
+    height: var(--vv-height, 100dvh);
+    max-height: var(--vv-height, 100dvh);
+    margin: 0;
+    top: var(--vv-top, 0);
+    border-radius: 0;
+    overscroll-behavior: contain;
+  }
   .editor-form { height: 100%; max-height: none; }
   #expandBtn { display: none; }
+  #backBtn { display: block; font-size: 1.3rem; }
+  .editor-head { padding: calc(6px + env(safe-area-inset-top)) 12px 0 4px; gap: 4px; }
+  .editor-scroll { padding: 0 16px; }
+  #editBody { min-height: 30vh; }
+  #editor .editor-meta { padding: 0 16px; }
+  #editor .editor-actions {
+    padding: 2px 4px calc(2px + env(safe-area-inset-bottom));
+    gap: 0;
+  }
+  /* The ← button closes the note, so the Close text button isn't needed. */
+  #editor .editor-actions .text-btn { display: none; }
+  .checklist input[type="checkbox"] { width: 20px; height: 20px; margin-top: 2px; flex-shrink: 0; }
+  .checklist.editing li { gap: 10px; padding: 4px 0; }
+  .checklist.editing .remove { width: 36px; height: 36px; margin: -6px -8px -6px 0; flex-shrink: 0; }
+  .palette, .label-picker { max-width: calc(100vw - 16px); }
+  .editor.small { width: calc(100vw - 16px); }
 }
 
 /* Links */
